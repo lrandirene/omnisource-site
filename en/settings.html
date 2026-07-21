@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OmniSource Settings</title>
+<script>
+  (() => {
+    const saved = localStorage.getItem("omnisource-theme");
+    document.documentElement.dataset.theme = saved || "dark";
+  })();
+</script>
+<style>
+  :root {
+    --bg:#0a0a0f; --panel:#13131c; --fg:#e8e8ef; --muted:#8e8e9e; --accent:#7c83ff;
+    --border:#1f1f2b; --soft-border:#282836; --body-copy:#cdced8; --input:#0e0e16;
+    --success:#6fb0a5; --warn:#d9a85c; --hero-bg:#11111a;
+  }
+  :root[data-theme="light"] {
+    --bg:#f7f8fb; --panel:#ffffff; --fg:#171821; --muted:#687084; --accent:#4257c9;
+    --border:#dfe3ee; --soft-border:#d7dce8; --body-copy:#303545; --input:#f0f3f9;
+    --success:#147c71; --warn:#9c6519; --hero-bg:#ffffff;
+  }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--accent); text-decoration:none; }
+  .site-hero { background:var(--hero-bg); border-bottom:1px solid var(--border); }
+  .site-hero-inner { max-width:1180px; margin:0 auto; padding:28px 20px 30px; }
+  .topline { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+  .back-link, .icon-btn { display:inline-grid; place-items:center; min-width:38px; height:38px;
+    border-radius:999px; border:1px solid var(--border); background:var(--panel); color:var(--muted);
+    box-shadow:0 8px 24px rgba(0,0,0,.08); }
+  .back-link { grid-auto-flow:column; gap:8px; padding:0 14px; font-weight:700; }
+  .back-link:hover, .icon-btn:hover { color:#fff; background:var(--accent); border-color:var(--accent); }
+  .hero-title { margin:0; font-size:2.15rem; line-height:1.05; letter-spacing:0; font-weight:800; }
+  .hero-copy { max-width:780px; margin:10px 0 0; color:var(--body-copy); font-size:1rem; }
+  .shell { max-width:980px; margin:0 auto; padding:22px 20px 72px; }
+  .builder { display:grid; grid-template-columns:1fr; gap:28px; margin-top:20px; }
+  .settings-section { padding:18px 0 20px; border-top:1px solid var(--soft-border); }
+  .settings-section:first-child { border-top:0; padding-top:0; }
+  .settings-section h2 { margin:0 0 12px; font-size:.92rem; line-height:1.2; color:var(--success);
+    text-transform:uppercase; letter-spacing:.04em; }
+  .section-note { margin:-4px 0 12px; color:var(--muted); font-size:.86rem; }
+  .field-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+  .field { display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .field.full { grid-column:1 / -1; }
+  label, .field-label { color:var(--muted); font-size:.78rem; font-weight:700; }
+  input, textarea, select { width:100%; border:1px solid var(--soft-border); border-radius:8px;
+    background:var(--input); color:var(--fg); padding:9px 10px; font:inherit; outline:none; }
+  textarea { min-height:92px; resize:vertical; }
+  input:focus, textarea:focus, select:focus { border-color:var(--accent); }
+  .checks { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; }
+  .check { display:flex; align-items:center; gap:9px; min-height:36px; border:1px solid var(--soft-border);
+    border-radius:8px; padding:7px 9px; background:var(--panel); color:var(--body-copy); }
+  .check input { width:16px; height:16px; padding:0; accent-color:var(--accent); }
+  .track-library { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
+  .track-card { appearance:none; text-align:left; border:1px solid var(--soft-border); border-radius:8px;
+    background:var(--panel); color:var(--fg); padding:11px 12px; font:inherit; cursor:pointer; }
+  .track-card:hover, .track-card.active { border-color:var(--accent); }
+  .track-card.active { box-shadow:inset 0 0 0 1px var(--accent); }
+  .track-card.add-new { border-style:dashed; color:var(--accent); }
+  .track-card-title { display:block; font-weight:800; }
+  .track-card-meta { display:block; margin-top:3px; color:var(--muted); font-size:.78rem; }
+  .primary-btn, .plain-btn { appearance:none; border:1px solid var(--soft-border);
+    border-radius:8px; background:var(--panel); color:var(--fg); padding:8px 10px;
+    font:inherit; font-weight:700; cursor:pointer; }
+  .plain-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .primary-btn { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .source-config { display:grid; gap:12px; padding:14px 0 18px; border-top:1px solid var(--soft-border); }
+  .source-config:first-of-type { border-top:0; padding-top:0; }
+  .source-config[hidden] { display:none; }
+  .source-config h3 { margin:0; color:var(--fg); font-size:.92rem; }
+  .preview { border:1px solid var(--border); background:var(--panel); border-radius:10px; overflow:hidden; }
+  .preview-head { display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:13px 14px; border-bottom:1px solid var(--soft-border); }
+  .preview-head h2 { margin:0; font-size:.95rem; }
+  .preview-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .preview-body { display:grid; gap:14px; padding:14px; }
+  .save-panel { display:grid; gap:12px; }
+  .save-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .save-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .save-state { color:var(--muted); font-size:.76rem; font-weight:800; }
+  .save-state.ready { color:var(--success); }
+  .save-state.warn { color:var(--warn); }
+  .save-summary { margin:0; color:var(--body-copy); font-size:.88rem; }
+  .advanced-panel { border-top:1px solid var(--soft-border); padding-top:12px; }
+  .advanced-panel summary { cursor:pointer; color:var(--muted); font-weight:800; font-size:.82rem; }
+  .advanced-body { display:grid; gap:12px; margin-top:12px; }
+  button:disabled { cursor:not-allowed; opacity:.45; }
+  .code-label { display:flex; align-items:center; justify-content:space-between; gap:8px;
+    color:var(--muted); font-size:.76rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+  pre { margin:0; max-height:360px; overflow:auto; border:1px solid var(--soft-border);
+    border-radius:8px; background:var(--input); color:var(--body-copy); padding:12px;
+    font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; white-space:pre; }
+  .status { min-height:20px; color:var(--success); font-size:.82rem; }
+  .hint { color:var(--muted); font-size:.82rem; margin:.35rem 0 0; }
+  @media (max-width:640px) {
+    .field-grid { grid-template-columns:1fr; }
+    .topline { align-items:flex-start; flex-direction:column; }
+  }
+</style><link rel="stylesheet" href="../theme.css"><link rel="stylesheet" href="../workspace.css"></head>
+<body class="settings-page">
+<header class="site-hero">
+  <div class="site-hero-inner">
+    <div class="topline">
+      <a class="back-link" href="./" aria-label="返回日报"><span class="workspace-brand-mark" aria-hidden="true">◉</span><span>OMNI<span class="brand-dot-text">.</span>SOURCE</span></a>
+      <button class="icon-btn" type="button" id="themeBtn" aria-label="切换主题" title="切换主题"><span aria-hidden="true">☾</span></button>
+    </div>
+    <span class="workspace-kicker">03 / SETTINGS</span>
+    <h1 class="hero-title">Settings</h1>
+    <p class="hero-copy">先选择已有 track 或新建一个 track，再选择信息源并配置每个 source 的细节。</p>
+  </div>
+</header>
+<main class="shell">
+  <div class="builder">
+    <form id="settingsForm" autocomplete="off">
+      <section class="settings-section">
+        <h2>Tracks</h2>
+        <p class="section-note">选择一个已有 track 继续编辑，或者新建一个自定义 track。</p>
+        <div class="track-library" id="trackLibrary"></div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Track Identity</h2>
+        <p class="section-note">这里决定保存后的 `tracks/&lt;id&gt;.yaml` 文件名和报告里显示的名称。</p>
+        <div class="field-grid">
+          <div class="field">
+            <label for="trackId">Track id</label>
+            <input id="trackId" value="my-ai-radar" spellcheck="false">
+          </div>
+          <input id="activeTracks" type="hidden" value="my-ai-radar">
+          <div class="field" data-language-field="zh">
+            <label for="displayZh">中文名称</label>
+            <input id="displayZh" value="我的 AI 雷达">
+          </div>
+          <div class="field" data-language-field="en">
+            <label for="displayEn">English name</label>
+            <input id="displayEn" value="My AI Radar">
+          </div>
+          <div class="field full" data-language-field="zh">
+            <label for="descZh">中文描述</label>
+            <input id="descZh" value="关注我关心的论文、开源项目、实验室博客和 X 账号的个人科研雷达。">
+          </div>
+          <div class="field full" data-language-field="en">
+            <label for="descEn">English description</label>
+            <input id="descEn" value="A personal research radar for papers, repositories, lab notes, and X accounts I care about.">
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Search and Output</h2>
+        <p class="section-note">这些 queries 会统一用于 arXiv、GitHub、Hacker News 和 X/Twitter；每个平台下面只保留平台特有配置。</p>
+        <div class="field-grid">
+          <div class="field">
+            <label for="searchQueries">Track search queries</label>
+            <textarea id="searchQueries">LLM agents
+reasoning
+tool use
+inference optimization
+post-training
+benchmark</textarea>
+          </div>
+          <div class="field">
+            <label for="negativeKeywords">Negative keywords</label>
+            <textarea id="negativeKeywords">finance
+blockchain
+cryptocurrency</textarea>
+          </div>
+          <div class="field">
+            <label for="topPapers">Top papers</label>
+            <input id="topPapers" type="number" min="1" max="30" value="15">
+          </div>
+          <div class="field">
+            <label for="topRepos">Top repos</label>
+            <input id="topRepos" type="number" min="1" max="20" value="5">
+          </div>
+          <div class="field">
+            <label for="topBlogs">Top blogs</label>
+            <input id="topBlogs" type="number" min="1" max="20" value="5">
+          </div>
+          <div class="field">
+            <label for="language">Report languages</label>
+            <select id="language"><option value="zh">中文 only</option><option value="en">English only</option><option value="both">中文 + English</option></select>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Sources</h2>
+        <p class="section-note">先决定这个 track 从哪里收集信号。下面只会展开已选 source 的细节配置。</p>
+        <div class="checks" id="sourceChecks">
+          <label class="check"><input type="checkbox" value="arxiv" checked> arXiv</label>
+          <label class="check"><input type="checkbox" value="hf_papers" checked> Hugging Face papers</label>
+          <label class="check"><input type="checkbox" value="rss" checked> RSS blogs</label>
+          <label class="check"><input type="checkbox" value="github" checked> GitHub</label>
+          <label class="check"><input type="checkbox" value="hackernews"> Hacker News</label>
+          <label class="check"><input type="checkbox" value="reddit"> Reddit</label>
+          <label class="check"><input type="checkbox" value="twitter" checked> X/Twitter</label>
+          <label class="check"><input type="checkbox" value="xiaohongshu"> 小红书</label>
+          <label class="check"><input type="checkbox" value="zhihu"> 知乎</label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Source Details</h2>
+        <p class="section-note">每个已选 source 在这里填自己的抓取范围。没选的 source 会自动收起。</p>
+        <div id="sourceDetails">
+          <section class="source-config" data-source-detail="arxiv">
+            <h3>arXiv</h3>
+            <div class="field-grid">
+              <div class="field">
+                <label for="categories">arXiv categories</label>
+                <textarea id="categories">cs.AI
+cs.LG
+cs.CL</textarea>
+              </div>
+              <div class="field">
+                <label for="days">Lookback days</label>
+                <input id="days" type="number" min="1" max="30" value="3">
+              </div>
+            </div>
+          </section>
+
+          <section class="source-config" data-source-detail="hf_papers">
+            <h3>Hugging Face papers</h3>
+            <p class="hint">使用下面的关键词筛选 Hugging Face 每日论文；这里不需要额外账号列表。</p>
+          </section>
+
+          <section class="source-config" data-source-detail="rss">
+            <h3>RSS blogs</h3>
+            <div class="field-grid">
+              <div class="field full">
+                <label for="rssFeeds">RSS feeds</label>
+                <textarea id="rssFeeds">https://huggingface.co/blog/feed.xml
+https://blog.research.google/feeds/posts/default
+https://openai.com/news/rss.xml</textarea>
+              </div>
+              <div class="field">
+                <label for="rssDays">RSS lookback days</label>
+                <input id="rssDays" type="number" min="1" max="90" value="21">
+              </div>
+            </div>
+          </section>
+
+          <section class="source-config" data-source-detail="github">
+            <h3>GitHub</h3>
+            <p class="hint">GitHub 会使用统一的 track search queries；这里不需要单独填写搜索词。</p>
+          </section>
+
+          <section class="source-config" data-source-detail="hackernews">
+            <h3>Hacker News</h3>
+            <input id="hnTop" type="hidden" value="50">
+            <p class="hint">Hacker News 也会使用统一的 track search queries。</p>
+          </section>
+
+          <section class="source-config" data-source-detail="reddit">
+            <h3>Reddit</h3>
+            <div class="field-grid">
+              <div class="field">
+                <label for="redditSubreddits">Reddit communities</label>
+                <textarea id="redditSubreddits">MachineLearning
+LocalLLaMA</textarea>
+              </div>
+              <input id="redditTop" type="hidden" value="50">
+            </div>
+          </section>
+
+          <section class="source-config" data-source-detail="twitter">
+            <h3>X/Twitter</h3>
+            <div class="field-grid">
+              <div class="field full">
+                <label class="check"><input type="checkbox" id="onlyHandles"> 只看这些 X 账号，不做宽泛关键词搜索</label>
+              </div>
+              <div class="field">
+                <label for="twitterHandles">Accounts / handles</label>
+                <textarea id="twitterHandles">karpathy
+swyx
+ClementDelangue
+OpenAI
+GoogleDeepMind</textarea>
+              </div>
+              <div class="field">
+                <label for="tweetLanguage">Tweet language</label>
+                <select id="tweetLanguage"><option value="en">English</option><option value="">Any</option><option value="zh">中文</option></select>
+              </div>
+              <input id="twitterMax" type="hidden" value="80">
+            </div>
+            <p class="hint">X/Twitter 的关键词搜索也来自统一的 track search queries；勾选“只看这些账号”后，会只看上面的 accounts。</p>
+          </section>
+
+          <section class="source-config" data-source-detail="xiaohongshu">
+            <h3>小红书</h3>
+            <div class="field-grid">
+              <div class="field full">
+                <label for="xiaohongshuCreators">Creators</label>
+                <textarea id="xiaohongshuCreators">科研工具博主 | https://www.xiaohongshu.com/user/profile/6489b7940000000012035e9b</textarea>
+              </div>
+              <div class="field">
+                <label for="xiaohongshuDays">Lookback days</label>
+                <input id="xiaohongshuDays" type="number" min="1" max="90" value="30">
+              </div>
+            </div>
+            <p class="hint">每行一个博主：名称 | profile 链接。小红书需要运行环境登录 OpenCLI；没有登录时会跳过，不影响其他 source。</p>
+          </section>
+
+          <section class="source-config" data-source-detail="zhihu">
+            <h3>知乎</h3>
+            <div class="field-grid">
+              <div class="field full">
+                <label for="zhihuCreators">Creators</label>
+                <textarea id="zhihuCreators">zylmozart | https://www.zhihu.com/people/zylmozart</textarea>
+              </div>
+              <div class="field">
+                <label for="zhihuDays">Lookback days</label>
+                <input id="zhihuDays" type="number" min="1" max="90" value="30">
+              </div>
+            </div>
+            <p class="hint">每行一个作者：名称 | profile 链接。知乎会同时抓文章和回答，再用统一 track search queries 做筛选。</p>
+          </section>
+        </div>
+      </section>
+    </form>
+
+    <aside class="preview" aria-label="Save settings">
+      <div class="preview-head">
+        <h2>Save settings</h2>
+        <span class="save-state" id="authState">Backend not connected</span>
+      </div>
+      <div class="preview-body">
+        <div class="save-panel">
+          <p class="save-summary">先保存配置到仓库；需要立刻生成新日报和网站时，再点重建。</p>
+          <div class="save-actions">
+            <button class="plain-btn" type="button" id="loginGitHub">Sign in with GitHub</button>
+            <button class="primary-btn" type="button" id="saveGitHub">Save settings</button>
+            <button class="plain-btn" type="button" id="rebuildGitHub">Rebuild report/site</button>
+          </div>
+          <div class="status" id="status" aria-live="polite"></div>
+        </div>
+        <details class="advanced-panel">
+          <summary>Advanced YAML and API settings</summary>
+          <div class="advanced-body">
+            <div class="field">
+              <label for="apiBase">Settings API URL</label>
+              <input id="apiBase" placeholder="https://omnisource-settings-api.example.workers.dev" spellcheck="false">
+            </div>
+            <div class="preview-actions">
+              <button class="plain-btn" type="button" id="copyTrack">Copy track YAML</button>
+              <button class="plain-btn" type="button" id="downloadTrack">Download YAML</button>
+              <button class="plain-btn" type="button" id="copyApp">Copy app YAML</button>
+            </div>
+            <div>
+              <div class="code-label"><span>tracks/<span id="trackFile">my-ai-radar.yaml</span></span></div>
+              <pre id="trackYaml"></pre>
+            </div>
+            <div>
+              <div class="code-label"><span>omnisource.yaml</span></div>
+              <pre id="appYaml"></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </aside>
+  </div>
+</main>
+<script>
+const KNOWN_TRACKS = [{"slug": "ai-infra", "name": "AI 基础设施", "name_en": "AI Infrastructure", "description": "面向分布式训练、推理服务、系统、编译器、内核与集群的 AI 基础设施。", "description_en": "AI infrastructure for distributed training, inference serving, systems, compilers, kernels, and clusters.", "settings": {"trackId": "ai-infra", "activeTracks": "ai-infra", "displayZh": "AI 基础设施", "displayEn": "AI Infrastructure", "descZh": "面向分布式训练、推理服务、系统、编译器、内核与集群的 AI 基础设施。", "descEn": "AI infrastructure for distributed training, inference serving, systems, compilers, kernels, and clusters.", "sources": ["arxiv", "hf_papers", "rss", "github", "hackernews", "reddit", "twitter", "xiaohongshu", "zhihu"], "categories": "cs.DC\ncs.OS\ncs.PL\ncs.AR\ncs.LG\ncs.AI", "negativeKeywords": "finance\nblockchain\ncryptocurrency", "onlyHandles": false, "twitterHandles": "vllm_project\nlmsysorg\nPyTorch\nNVIDIAAI\nHuggingFace\ndatabricks\nanyscalecompute", "searchQueries": "AI infrastructure\nLLM serving\ninference\nserving\ndistributed training\nparallelism\ndata parallel\nmodel parallel\npipeline parallel\ncluster\ndatacenter\ndata center\nscheduler\nscheduling\nresource management\nGPU\naccelerator\nCUDA\nTriton\nkernel\ncompiler\nruntime\nmemory\nKV cache\nprefill\nbatching\nrouting\nthroughput\nlatency\ncommunication\nbandwidth\nquantization\nspeculative decoding\ncheckpoint\nfault tolerance\ninference engine\nCUDA kernel\nGPU inference\nLLM inference\nGPU serving\n人工智能\n大模型\n推理\n训练\n部署\n算力\n集群\n系统\n工程\n论文", "tweetLanguage": "en", "twitterMax": "80", "xiaohongshuCreators": "科研工具博主 | https://www.xiaohongshu.com/user/profile/6489b7940000000012035e9b", "xiaohongshuDays": "30", "zhihuCreators": "zylmozart | https://www.zhihu.com/people/zylmozart", "zhihuDays": "30", "rssFeeds": "https://huggingface.co/blog/feed.xml\nhttps://bair.berkeley.edu/blog/feed.xml\nhttps://blog.research.google/feeds/posts/default\nhttps://openai.com/news/rss.xml\nhttps://pytorch.org/blog/feed.xml\nhttps://developer.nvidia.com/blog/category/artificial-intelligence/feed/\nhttps://www.anyscale.com/blog/rss.xml\nhttps://www.databricks.com/feed\nhttps://lambdalabs.com/blog/rss.xml", "rssDays": "45", "hnTop": "50", "redditSubreddits": "MachineLearning\nLocalLLaMA", "redditTop": "50", "days": "7", "topPapers": "15", "topRepos": "5", "topBlogs": "5", "language": "both", "advancedYaml": "relevance_filter:\n  paper:\n    preferred_arxiv_categories:\n    - cs.DC\n    - cs.OS\n    - cs.PL\n    - cs.AR\n    broad_arxiv_categories:\n    - cs.AI\n    - cs.LG\n    category_boosts:\n      cs.DC: 4\n      cs.OS: 3\n      cs.PL: 2\n      cs.AR: 2\n    min_anchor_hits: 1\n    broad_category_min_anchor_hits: 1\n    anchor_keywords:\n    - LLM serving\n    - inference engine\n    - serving\n    - distributed training\n    - data parallel\n    - model parallel\n    - pipeline parallel\n    - cluster\n    - scheduling\n    - resource management\n    - GPU\n    - accelerator\n    - CUDA\n    - Triton\n    - kernel\n    - compiler\n    - runtime\n    - KV cache\n    - prefill\n    - decode routing\n    - batching\n    - routing\n    - throughput\n    - latency\n    - communication\n    - bandwidth\n    - quantization\n    - speculative decoding\n    - checkpoint\n    - fault tolerance\n  repo:\n    allow_keyword_fallback: true\n  blog:\n    allow_keyword_fallback: true\n\ntopics:\n- name: 训练系统\n  children:\n  - name: 并行与分布式训练\n    children:\n    - data / model / pipeline parallelism\n    - large-scale pretraining systems\n    - checkpoint / fault tolerance\n  - name: 集群调度与可靠性\n    children:\n    - cluster scheduling\n    - resource management / elasticity\n- name: 推理系统\n  children:\n  - name: Serving 引擎\n    children:\n    - LLM serving / inference engines\n    - batching / routing / latency\n    - agent serving systems\n  - name: 内存与解码优化\n    children:\n    - KV cache / long context memory\n    - quantization / compression\n    - speculative decoding\n- name: 编译器、内核与硬件\n  children:\n  - name: 编译器与运行时\n    children:\n    - compiler / runtime\n    - graph optimization\n  - name: GPU/加速器内核\n    children:\n    - CUDA / kernel optimization\n    - accelerator / edge inference\n- name: 基准与观测\n  children:\n  - name: Infra 评测\n    children:\n    - AI infrastructure benchmarks\n    - profiling / observability\n\ntopic_translations:\n  训练系统: Training Systems\n  并行与分布式训练: Parallel and Distributed Training\n  集群调度与可靠性: Cluster Scheduling and Reliability\n  推理系统: Inference Systems\n  Serving 引擎: Serving Engines\n  内存与解码优化: Memory and Decoding Optimization\n  编译器、内核与硬件: Compilers, Kernels, and Hardware\n  编译器与运行时: Compilers and Runtime\n  GPU/加速器内核: GPU / Accelerator Kernels\n  基准与观测: Benchmarks and Observability\n  Infra 评测: Infrastructure Evaluation"}}, {"slug": "ai-algorithm", "name": "AI 算法", "name_en": "AI Algorithms", "description": "AI 算法、模型架构、推理、学习方法、后训练与评测。", "description_en": "AI algorithms, model architectures, reasoning, learning methods, post-training, and evaluation.", "settings": {"trackId": "ai-algorithm", "activeTracks": "ai-algorithm", "displayZh": "AI 算法", "displayEn": "AI Algorithms", "descZh": "AI 算法、模型架构、推理、学习方法、后训练与评测。", "descEn": "AI algorithms, model architectures, reasoning, learning methods, post-training, and evaluation.", "sources": ["arxiv", "hf_papers", "rss", "github", "hackernews", "reddit", "twitter", "xiaohongshu", "zhihu"], "categories": "cs.AI\ncs.LG\ncs.CL\ncs.CV", "negativeKeywords": "finance\nblockchain\ncryptocurrency", "onlyHandles": false, "twitterHandles": "karpathy\nfchollet\nylecun\nhardmaru\nrasbt\nlilianweng\nOpenAI\nAnthropicAI\nGoogleDeepMind", "searchQueries": "algorithm\narchitecture\nfoundation model\nreasoning\nplanning\nreinforcement learning\nrepresentation learning\noptimization\ntransformer\nattention\ndiffusion\nmultimodal\npost-training\nfine-tuning\nbenchmark\nevaluation\nagent\nAI\n人工智能\n大模型\n推理\n后训练\n多模态\n强化学习\n评测\n科研\n论文\n学术\nreasoning model\npost training\nmultimodal model\nmachine learning algorithm\nAI algorithm", "tweetLanguage": "en", "twitterMax": "80", "xiaohongshuCreators": "科研工具博主 | https://www.xiaohongshu.com/user/profile/6489b7940000000012035e9b", "xiaohongshuDays": "30", "zhihuCreators": "zylmozart | https://www.zhihu.com/people/zylmozart", "zhihuDays": "30", "rssFeeds": "https://huggingface.co/blog/feed.xml\nhttps://bair.berkeley.edu/blog/feed.xml\nhttps://blog.research.google/feeds/posts/default\nhttps://openai.com/news/rss.xml", "rssDays": "21", "hnTop": "50", "redditSubreddits": "MachineLearning\nLocalLLaMA", "redditTop": "50", "days": "3", "topPapers": "15", "topRepos": "5", "topBlogs": "5", "language": "both", "advancedYaml": "watchlist:\n  authors:\n  - Yoshua Bengio\n  - Chelsea Finn\n  top: 10\n\ntopics:\n- name: 模型与训练方法\n  children:\n  - name: 架构设计\n    children:\n    - Transformer / attention variants\n    - diffusion / generative modeling\n    - multimodal / VLM architecture\n  - name: 学习目标与优化\n    children:\n    - representation learning\n    - optimization / training dynamics\n    - data-efficient learning\n- name: 推理、智能体与后训练\n  children:\n  - name: 推理与规划\n    children:\n    - reasoning / planning\n    - tool use / agent workflow\n  - name: 后训练与对齐\n    children:\n    - reinforcement learning\n    - post-training / alignment data\n- name: 评测与可靠性\n  children:\n  - name: 评测体系\n    children:\n    - evaluation / benchmarks\n    - multimodal evaluation\n  - name: 鲁棒性与泛化\n    children:\n    - robustness / generalization\n    - safety / refusal behavior\n\ntopic_translations:\n  模型与训练方法: Models and Training Methods\n  架构设计: Architecture Design\n  学习目标与优化: Learning Objectives and Optimization\n  推理、智能体与后训练: Reasoning, Agents, and Post-Training\n  推理与规划: Reasoning and Planning\n  后训练与对齐: Post-Training and Alignment\n  评测与可靠性: Evaluation and Reliability\n  评测体系: Evaluation Systems\n  鲁棒性与泛化: Robustness and Generalization"}}];
+const APP_CONFIG = {"activeTracks": ["ai-algorithm", "ai-infra"], "settingsApiUrl": "https://omnisource-settings-api.omnisource.workers.dev"};
+const DEFAULT_API_BASE = "https://omnisource-settings-api.omnisource.workers.dev";
+const SETTINGS_LANGUAGE = "en";
+const STORAGE_KEY = 'omnisource-settings-draft';
+const API_STORAGE_KEY = 'omnisource-settings-api-base';
+const fields = [
+  'trackId','activeTracks','displayZh','displayEn','descZh','descEn','categories','searchQueries',
+  'negativeKeywords','onlyHandles','twitterHandles','tweetLanguage','twitterMax',
+  'xiaohongshuCreators','xiaohongshuDays','zhihuCreators','zhihuDays',
+  'rssFeeds','hnTop','redditSubreddits','redditTop',
+  'days','rssDays','topPapers','topRepos','topBlogs','language'
+];
+const $ = id => document.getElementById(id);
+const cleanId = value => String(value || 'my-ai-radar').toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'my-ai-radar';
+const isEnglishSettings = () => SETTINGS_LANGUAGE === 'en';
+const splitList = value => String(value || '').split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
+const splitRows = value => String(value || '').split(/\n+/).map(v => v.trim()).filter(Boolean);
+const checkedSources = () => [...document.querySelectorAll('#sourceChecks input:checked')].map(input => input.value);
+const quote = value => JSON.stringify(String(value ?? ''));
+const numberValue = (id, fallback) => Math.max(1, Number($(id).value || fallback));
+const searchQueries = state => splitList(state.searchQueries);
+const searchQueryText = state => searchQueries(state).join(' OR ');
+let currentAdvancedYaml = '';
+const yamlList = (name, values, indent = 0) => {
+  const pad = ' '.repeat(indent);
+  if (!values.length) return [`${pad}${name}: []`];
+  return [`${pad}${name}:`, ...values.map(value => `${pad}  - ${value}`)];
+};
+const yamlQuotedList = (name, values, indent = 0) => {
+  const pad = ' '.repeat(indent);
+  if (!values.length) return [`${pad}${name}: []`];
+  return [`${pad}${name}:`, ...values.map(value => `${pad}  - ${quote(value)}`)];
+};
+const creatorRows = value => splitRows(value).map(line => {
+  const parts = line.split('|');
+  const target = parts.length > 1 ? parts.slice(1).join('|').trim() : parts[0].trim();
+  const name = parts.length > 1 ? parts[0].trim() : '';
+  return { name, target };
+}).filter(row => row.name || row.target);
+const zhihuUserFromTarget = target => {
+  const text = String(target || '').trim();
+  if (!/^https?:\/\//i.test(text)) return text;
+  try {
+    const url = new URL(text);
+    const parts = url.pathname.split('/').filter(Boolean);
+    const peopleIndex = parts.indexOf('people');
+    if (peopleIndex >= 0 && parts[peopleIndex + 1]) return parts[peopleIndex + 1];
+    return parts.at(-1) || text;
+  } catch {
+    return text;
+  }
+};
+const yamlCreatorItems = (name, rows, platform, indent = 2) => {
+  const pad = ' '.repeat(indent);
+  if (!rows.length) return [`${pad}${name}: []`];
+  const lines = [`${pad}${name}:`];
+  rows.forEach(row => {
+    const display = row.name || row.target;
+    lines.push(`${pad}  - name: ${quote(display)}`);
+    if (platform === 'xiaohongshu') {
+      if (/^https?:\/\//i.test(row.target)) lines.push(`${pad}    profile_url: ${quote(row.target)}`);
+      else lines.push(`${pad}    user_id: ${quote(row.target)}`);
+    } else {
+      const user = zhihuUserFromTarget(row.target);
+      lines.push(`${pad}    user: ${quote(user)}`);
+      if (/^https?:\/\//i.test(row.target)) lines.push(`${pad}    profile_url: ${quote(row.target)}`);
+      lines.push(`${pad}    articles: true`, `${pad}    answers: true`);
+    }
+  });
+  return lines;
+};
+const collectState = () => {
+  const state = {};
+  fields.forEach(id => {
+    const el = $(id);
+    state[id] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  state.activeTracks = state.activeTracks || state.trackId;
+  state.advancedYaml = currentAdvancedYaml;
+  state.sources = checkedSources();
+  return state;
+};
+const syncSourceDetails = state => {
+  const enabled = new Set(state?.sources || checkedSources());
+  document.querySelectorAll('[data-source-detail]').forEach(section => {
+    section.hidden = !enabled.has(section.dataset.sourceDetail);
+  });
+};
+const syncLanguageFields = () => {
+  const enabled = new Set([isEnglishSettings() ? 'en' : 'zh']);
+  document.querySelectorAll('[data-language-field]').forEach(field => {
+    field.hidden = !enabled.has(field.dataset.languageField);
+  });
+};
+const updateTrackLibrarySelection = trackId => {
+  const id = cleanId(trackId);
+  const known = new Set(KNOWN_TRACKS.map(track => cleanId(track.slug)));
+  document.querySelectorAll('[data-track-card]').forEach(card => {
+    const key = card.dataset.trackCard;
+    const active = key === id || (key === 'custom' && !known.has(id));
+    card.classList.toggle('active', active);
+  });
+};
+const applyState = state => {
+  if (!state) return;
+  if (state.advancedYaml !== undefined) currentAdvancedYaml = String(state.advancedYaml || '');
+  if (state.searchQueries === undefined) {
+    state.searchQueries = [state.keywords, state.twitterQueries, state.githubQuery, state.hnQuery]
+      .filter(Boolean)
+      .join('\n');
+  }
+  fields.forEach(id => {
+    const el = $(id);
+    if (!el || state[id] === undefined) return;
+    if (el.type === 'checkbox') el.checked = !!state[id];
+    else el.value = state[id];
+  });
+  if (Array.isArray(state.sources)) {
+    document.querySelectorAll('#sourceChecks input').forEach(input => {
+      input.checked = state.sources.includes(input.value);
+    });
+  }
+  syncSourceDetails(state);
+  syncLanguageFields(state);
+};
+const localizedPair = (state, zhKey, enKey, fallback = '') => {
+  const zh = String(state[zhKey] || '').trim();
+  const en = String(state[enKey] || '').trim();
+  const visible = isEnglishSettings() ? en : zh;
+  if (isEnglishSettings()) return { zh: zh || visible || fallback, en: en || zh || fallback };
+  return { zh: zh || en || fallback, en: en || visible || fallback };
+};
+const trackYaml = state => {
+  const id = cleanId(state.trackId);
+  const queries = state.onlyHandles ? [] : searchQueries(state);
+  const handles = splitList(state.twitterHandles).map(handle => handle.replace(/^@/, ''));
+  const languages = state.language === 'both' ? ['中文', 'English'] : (state.language === 'zh' ? ['中文'] : ['English']);
+  const names = localizedPair(state, 'displayZh', 'displayEn', id);
+  const descriptions = localizedPair(state, 'descZh', 'descEn', '');
+  const primaryLanguage = state.language === 'both' ? SETTINGS_LANGUAGE : state.language;
+  const primaryName = primaryLanguage === 'en' ? names.en : names.zh;
+  const primaryDescription = primaryLanguage === 'en' ? descriptions.en : descriptions.zh;
+  const lines = [
+    `name: ${id}`,
+    `display_name: ${quote(primaryName)}`,
+    'display_names:',
+    `  zh: ${quote(names.zh)}`,
+    `  en: ${quote(names.en)}`,
+    `description: ${quote(primaryDescription)}`,
+    'descriptions:',
+    `  zh: ${quote(descriptions.zh)}`,
+    `  en: ${quote(descriptions.en)}`,
+    '',
+    ...yamlList('sources', state.sources || []),
+    '',
+    ...yamlList('categories', splitList(state.categories)),
+    `days: ${numberValue('days', 3)}`,
+    'weekly_days: 7',
+    'pool_size: 450',
+    '',
+    ...yamlQuotedList('keywords', searchQueries(state)),
+    ...yamlQuotedList('negative_keywords', splitList(state.negativeKeywords)),
+    '',
+  ];
+  if ((state.sources || []).includes('twitter')) {
+    lines.push(
+      'twitter:',
+      '  mode: apify',
+      '  apify_actor: danek/twitter-scraper',
+      `  tweet_language: ${quote(state.tweetLanguage || '')}`,
+      '  query_suffix: "filter:links"',
+      ...yamlQuotedList('queries', queries, 2),
+      ...yamlQuotedList('handles', handles, 2),
+      `  max_results: ${numberValue('twitterMax', 80)}`,
+      ''
+    );
+  }
+  if ((state.sources || []).includes('xiaohongshu')) {
+    lines.push(
+      'xiaohongshu:',
+      '  enabled: true',
+      '  backend: opencli',
+      '  command: opencli',
+      '  timezone: Asia/Shanghai',
+      `  days: ${numberValue('xiaohongshuDays', 30)}`,
+      '  max_notes_per_creator: 20',
+      '  fetch_details: false',
+      '  include_unknown_dates: false',
+      ...yamlCreatorItems('creators', creatorRows(state.xiaohongshuCreators), 'xiaohongshu', 2),
+      ''
+    );
+  }
+  if ((state.sources || []).includes('zhihu')) {
+    lines.push(
+      'zhihu:',
+      '  enabled: true',
+      '  backend: opencli',
+      '  command: opencli',
+      '  timezone: Asia/Shanghai',
+      `  days: ${numberValue('zhihuDays', 30)}`,
+      '  max_items_per_creator: 20',
+      '  summary_max_chars: 500',
+      ...yamlCreatorItems('creators', creatorRows(state.zhihuCreators), 'zhihu', 2),
+      ''
+    );
+  }
+  if ((state.sources || []).includes('rss')) {
+    lines.push(...yamlQuotedList('rss_feeds', splitList(state.rssFeeds)), `rss_days: ${numberValue('rssDays', 21)}`, '');
+  }
+  if ((state.sources || []).includes('github')) {
+    lines.push(
+      `github_query: ${quote(searchQueryText(state))}`,
+      'github_trending_periods:',
+      '  - daily',
+      '  - weekly',
+      'github_fallback_created_days: 120',
+      'github_days: 14',
+      'github_top: 30',
+      ''
+    );
+  }
+  if ((state.sources || []).includes('hackernews')) {
+    lines.push(
+      `hn_query: ${quote(searchQueryText(state))}`,
+      `hn_top: ${numberValue('hnTop', 50)}`,
+      ''
+    );
+  }
+  if ((state.sources || []).includes('reddit')) {
+    lines.push(
+      ...yamlList('reddit_subreddits', splitList(state.redditSubreddits)),
+      `reddit_top: ${numberValue('redditTop', 50)}`,
+      ''
+    );
+  }
+  const advancedYaml = String(state.advancedYaml || '').trim();
+  if (advancedYaml) {
+    lines.push(advancedYaml, '');
+  } else {
+    lines.push(
+      'topics:',
+      '  - name: Research Focus',
+      '    children:',
+      '      - name: Main Questions',
+      '        children:',
+      `          - ${quote(searchQueries(state)[0] || 'primary theme')}`,
+      `          - ${quote(searchQueries(state)[1] || 'secondary theme')}`,
+      ''
+    );
+  }
+  lines.push(
+    'llm:',
+    '  provider: openai',
+    '  model: gpt-4o-mini',
+    '',
+    'ranking:',
+    '  relevance: 0.4',
+    '  novelty: 0.3',
+    '  popularity: 0.2',
+    '  code_available: 0.1',
+    '',
+    'quality_distill:',
+    '  min_score: 0.18',
+    '  buffer: 12',
+    '  fill_quota_types:',
+    '    - paper',
+    '    - repo',
+    '    - blog',
+    '',
+    'graph_author_enrichment_top_papers: 15',
+    '',
+    'output:',
+    `  top_papers: ${numberValue('topPapers', 15)}`,
+    `  top_repos: ${numberValue('topRepos', 5)}`,
+    `  top_blogs: ${numberValue('topBlogs', 5)}`,
+    `  top_social: ${(state.sources || []).some(source => ['twitter','hackernews','reddit','xiaohongshu','zhihu'].includes(source)) ? 5 : 0}`,
+    `  language: ${quote(languages[0])}`,
+    '  languages:',
+    ...languages.map(lang => `    - ${quote(lang)}`)
+  );
+  return lines.join('\n') + '\n';
+};
+const appYaml = state => {
+  const active = splitList(state.activeTracks).map(cleanId);
+  const tracks = active.length ? active : [cleanId(state.trackId)];
+  const lines = ['active_tracks:', ...tracks.map(track => `  - ${track}`)];
+  const configuredApi = normalizedApiBase(APP_CONFIG.settingsApiUrl || DEFAULT_API_BASE);
+  if (configuredApi) lines.push('', `settings_api_url: ${quote(configuredApi)}`);
+  return lines.join('\n') + '\n';
+};
+const activeTracksValue = trackId => {
+  const active = Array.isArray(APP_CONFIG.activeTracks) ? APP_CONFIG.activeTracks.map(cleanId).filter(Boolean) : [];
+  const id = cleanId(trackId);
+  if (!active.includes(id)) active.push(id);
+  return active.length ? active.join('\n') : id;
+};
+const render = () => {
+  const state = collectState();
+  state.trackId = cleanId(state.trackId);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  $('trackFile').textContent = `${state.trackId}.yaml`;
+  $('trackYaml').textContent = trackYaml(state);
+  $('appYaml').textContent = appYaml(state);
+  syncSourceDetails(state);
+  syncLanguageFields(state);
+  updateTrackLibrarySelection(state.trackId);
+};
+const setStatus = text => {
+  $('status').textContent = text;
+  window.setTimeout(() => { if ($('status').textContent === text) $('status').textContent = ''; }, 1800);
+};
+const setPersistentStatus = text => {
+  $('status').textContent = text;
+};
+const copyText = async text => {
+  await navigator.clipboard?.writeText(text);
+};
+const download = (filename, text) => {
+  const url = URL.createObjectURL(new Blob([text], { type:'text/yaml;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+};
+const applyExistingTrack = preset => {
+  applyState({
+    ...(preset.settings || {}),
+    trackId:preset.slug,
+    activeTracks:activeTracksValue(preset.slug),
+    advancedYaml:preset.settings?.advancedYaml || '',
+    displayZh:preset.name || preset.slug,
+    displayEn:preset.name_en || preset.slug,
+    descZh:preset.description || '',
+    descEn:preset.description_en || '',
+  });
+  render();
+};
+const newCustomTrack = () => {
+  const defaultName = isEnglishSettings() ? 'My AI Radar' : '我的 AI 雷达';
+  const defaultDescription = isEnglishSettings()
+    ? 'A personal research radar for papers, repositories, lab notes, and X accounts I care about.'
+    : '关注我关心的论文、开源项目、实验室博客和 X 账号的个人科研雷达。';
+  applyState({
+    trackId:'my-ai-radar',
+    activeTracks:activeTracksValue('my-ai-radar'),
+    advancedYaml:'',
+    displayZh:defaultName,
+    displayEn:defaultName,
+    descZh:defaultDescription,
+    descEn:defaultDescription,
+    categories:'cs.AI\ncs.LG\ncs.CL',
+    searchQueries:'LLM agents\nreasoning\ntool use\ninference optimization\npost-training\nbenchmark',
+    negativeKeywords:'finance\nblockchain\ncryptocurrency',
+    onlyHandles:false,
+    twitterHandles:'karpathy\nswyx\nClementDelangue\nOpenAI\nGoogleDeepMind',
+    tweetLanguage:'en',
+    twitterMax:'80',
+    xiaohongshuCreators:'科研工具博主 | https://www.xiaohongshu.com/user/profile/6489b7940000000012035e9b',
+    xiaohongshuDays:'30',
+    zhihuCreators:'zylmozart | https://www.zhihu.com/people/zylmozart',
+    zhihuDays:'30',
+    rssFeeds:'https://huggingface.co/blog/feed.xml\nhttps://blog.research.google/feeds/posts/default\nhttps://openai.com/news/rss.xml',
+    hnTop:'50',
+    redditSubreddits:'MachineLearning\nLocalLLaMA',
+    redditTop:'50',
+    days:'3',
+    rssDays:'21',
+    topPapers:'15',
+    topRepos:'5',
+    topBlogs:'5',
+    language:'both',
+    sources:['arxiv','hf_papers','rss','github','twitter'],
+  });
+  render();
+};
+const buildTrackLibrary = () => {
+  const row = $('trackLibrary');
+  const existingCards = KNOWN_TRACKS.map(preset => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'track-card';
+    btn.dataset.trackCard = cleanId(preset.slug);
+    const title = document.createElement('span');
+    title.className = 'track-card-title';
+    title.textContent = isEnglishSettings()
+      ? (preset.name_en || preset.name || preset.slug)
+      : (preset.name || preset.name_en || preset.slug);
+    const meta = document.createElement('span');
+    meta.className = 'track-card-meta';
+    meta.textContent = preset.slug;
+    btn.append(title, meta);
+    btn.addEventListener('click', () => applyExistingTrack(preset));
+    return btn;
+  });
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'track-card add-new';
+  add.dataset.trackCard = 'custom';
+  const title = document.createElement('span');
+  title.className = 'track-card-title';
+  title.textContent = isEnglishSettings() ? '+ New custom track' : '+ 新建自定义 track';
+  const meta = document.createElement('span');
+  meta.className = 'track-card-meta';
+  meta.textContent = isEnglishSettings() ? 'Name a track, then choose sources' : '命名 track，再选择 sources';
+  add.append(title, meta);
+  add.addEventListener('click', newCustomTrack);
+  row.replaceChildren(...existingCards, add);
+};
+const normalizedApiBase = value => {
+  const text = String(value || '').trim().replace(/\/+$/, '');
+  return text.includes('example.workers.dev') ? '' : text;
+};
+const apiBase = () => normalizedApiBase($('apiBase').value);
+const apiUrl = path => `${apiBase()}${path}`;
+const updateSaveControls = (stateText, mode = '') => {
+  const connected = !!apiBase();
+  $('loginGitHub').disabled = !connected;
+  $('saveGitHub').disabled = !connected;
+  $('rebuildGitHub').disabled = !connected;
+  const authState = $('authState');
+  authState.textContent = connected ? (stateText || 'Ready to connect') : 'Backend not connected';
+  authState.className = `save-state ${mode}`;
+};
+const apiFetch = async (path, options = {}) => {
+  if (!apiBase()) throw new Error('Settings API URL is empty.');
+  return fetch(apiUrl(path), {
+    credentials: 'include',
+    ...options,
+    headers: {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    },
+  });
+};
+const refreshSession = async () => {
+  if (!apiBase()) {
+    updateSaveControls();
+    setPersistentStatus('Settings API URL is empty.');
+    return;
+  }
+  setPersistentStatus('Checking GitHub sign-in...');
+  try {
+    const response = await apiFetch('/api/auth/session');
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || data.error || 'Session check failed.');
+    if (data.authenticated) {
+      updateSaveControls(`Signed in as ${data.user.login}`, 'ready');
+      setPersistentStatus(`Signed in as ${data.user.login}.`);
+    } else {
+      updateSaveControls('Not signed in', 'warn');
+      setPersistentStatus('Not signed in. Use Sign in with GitHub first.');
+    }
+  } catch (error) {
+    updateSaveControls('API unreachable', 'warn');
+    setPersistentStatus(error.message || 'Could not reach Settings API.');
+  }
+};
+const saveToGitHub = async () => {
+  render();
+  const id = cleanId($('trackId').value);
+  setPersistentStatus('Saving settings to GitHub...');
+  try {
+    const response = await apiFetch('/api/config/save', {
+      method: 'POST',
+      body: JSON.stringify({
+        track_path: `tracks/${id}.yaml`,
+        track_yaml: $('trackYaml').textContent,
+        app_yaml: $('appYaml').textContent,
+        message: `Update OmniSource settings for ${id}`,
+      }),
+    });
+    const data = await response.json();
+    if (response.status === 401) {
+      updateSaveControls('Sign in required', 'warn');
+      setPersistentStatus('Please sign in with GitHub first.');
+      return;
+    }
+    if (!response.ok) throw new Error(data.message || data.error || 'Save failed.');
+    updateSaveControls(`Saved by ${data.user}`, 'ready');
+    setPersistentStatus(`Saved ${data.commit.sha.slice(0, 7)}. Click Rebuild report/site when you want to regenerate the report.`);
+  } catch (error) {
+    updateSaveControls('Save failed', 'warn');
+    setPersistentStatus(error.message || 'Save failed.');
+  }
+};
+const rebuildFromGitHub = async () => {
+  setPersistentStatus('Starting report/site rebuild...');
+  try {
+    const response = await apiFetch('/api/config/rebuild', { method: 'POST' });
+    const data = await response.json();
+    if (response.status === 401) {
+      updateSaveControls('Sign in required', 'warn');
+      setPersistentStatus('Please sign in with GitHub first.');
+      return;
+    }
+    if (!response.ok) throw new Error(data.message || data.error || 'Rebuild failed.');
+    updateSaveControls(`Rebuild started by ${data.user}`, 'ready');
+    setPersistentStatus(`Rebuild started via ${data.workflow} on ${data.branch}.`);
+  } catch (error) {
+    updateSaveControls('Rebuild failed', 'warn');
+    setPersistentStatus(error.message || 'Rebuild failed.');
+  }
+};
+document.querySelectorAll('input, textarea, select').forEach(el => el.addEventListener('input', render));
+document.querySelectorAll('#sourceChecks input').forEach(el => el.addEventListener('change', render));
+$('copyTrack').addEventListener('click', async () => {
+  await copyText($('trackYaml').textContent);
+  setStatus('Track YAML copied');
+});
+$('copyApp').addEventListener('click', async () => {
+  await copyText($('appYaml').textContent);
+  setStatus('omnisource.yaml copied');
+});
+$('downloadTrack').addEventListener('click', () => {
+  const id = cleanId($('trackId').value);
+  download(`${id}.yaml`, $('trackYaml').textContent);
+  setStatus('Track YAML downloaded');
+});
+$('apiBase').addEventListener('input', () => {
+  const value = apiBase();
+  if (value) localStorage.setItem(API_STORAGE_KEY, value);
+  else localStorage.removeItem(API_STORAGE_KEY);
+  updateSaveControls();
+});
+$('loginGitHub').addEventListener('click', () => {
+  if (!apiBase()) {
+    setPersistentStatus('Settings API URL is empty.');
+    return;
+  }
+  setPersistentStatus('Opening GitHub sign-in...');
+  window.location.href = `${apiBase()}/api/auth/login?return_to=${encodeURIComponent(window.location.href)}`;
+});
+$('saveGitHub').addEventListener('click', saveToGitHub);
+$('rebuildGitHub').addEventListener('click', rebuildFromGitHub);
+$('themeBtn').addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('omnisource-theme', next);
+});
+buildTrackLibrary();
+const storedApiBase = normalizedApiBase(localStorage.getItem(API_STORAGE_KEY));
+$('apiBase').value = storedApiBase || DEFAULT_API_BASE || '';
+if (!storedApiBase && DEFAULT_API_BASE) localStorage.setItem(API_STORAGE_KEY, DEFAULT_API_BASE);
+updateSaveControls();
+const storedDraft = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+if (storedDraft) {
+  const preset = KNOWN_TRACKS.find(track => cleanId(track.slug) === cleanId(storedDraft.trackId));
+  if (preset?.settings?.advancedYaml && !storedDraft.advancedYaml) {
+    storedDraft.advancedYaml = preset.settings.advancedYaml;
+  }
+  if (!storedDraft.activeTracks || splitList(storedDraft.activeTracks).length <= 1) {
+    storedDraft.activeTracks = activeTracksValue(storedDraft.trackId || preset?.slug || 'my-ai-radar');
+  }
+  applyState(storedDraft);
+} else if (KNOWN_TRACKS.length) {
+  applyExistingTrack(KNOWN_TRACKS[0]);
+} else {
+  newCustomTrack();
+}
+render();
+refreshSession();
+</script>
+</body></html>
